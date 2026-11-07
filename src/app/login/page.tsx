@@ -5,6 +5,9 @@ import { Logo } from "@/components/Logo";
 
 export const metadata: Metadata = { title: "Sign in" };
 
+// Read DEMO_MODE at request time, not build time.
+export const dynamic = "force-dynamic";
+
 const DEMO = [
   { phone: "+919000000002", who: "Swati Joshi · T12-0408", role: "Resident (tenant): dues overdue, open complaint" },
   { phone: "+919000000003", who: "Aamir Shaikh · T21-1601", role: "Resident (owner): part paid" },

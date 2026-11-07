@@ -537,7 +537,7 @@ async function main() {
   });
   for (let i = 0; i < 9; i++) {
     const t = pick(COMPLAINT_TEXTS.filter((x) => x.urg !== "LOW"));
-    await makeComplaint({ flat: pick(nonSampleFlats), ...t, at: hoursAgo(int(1, 60)), state: pick(["ASSIGNED", "IN_PROGRESS", "ASSIGNED"] as const), lateResponse: chance(0.3) });
+    await makeComplaint({ flat: pick(nonSampleFlats), ...t, at: hoursAgo(int(1, 30)), state: pick(["IN_PROGRESS", "IN_PROGRESS", "ASSIGNED"] as const), lateResponse: chance(0.2) });
   }
   await makeComplaint({
     flat: pick(nonSampleFlats),

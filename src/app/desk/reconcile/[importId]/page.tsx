@@ -21,13 +21,14 @@ export default async function ImportPage({ params, searchParams }: { params: Pro
   const flats = await prisma.flat.findMany({ where: { id: { in: imp.lines.map((l) => l.flatId).filter((x): x is string => !!x) } }, select: { id: true, code: true } });
   const codeOf = new Map(flats.map((f) => [f.id, f.code]));
   const counts = ORDER.map((s) => ({ s, n: imp.lines.filter((l) => l.status === s).length })).filter((x) => x.n > 0);
-  const credits = imp.lines.filter((l) => l.amountPaise > 0);
+  // Share of new credits that needed no person: duplicates and already-posted money are excluded.
+  const credits = imp.lines.filter((l) => l.amountPaise > 0 && l.status !== "DUPLICATE" && l.status !== "ALREADY_POSTED");
   const autoPct = credits.length ? Math.round((imp.lines.filter((l) => l.status === "AUTO_POSTED").length / credits.length) * 100) : 0;
   const shown = status && ORDER.includes(status) ? imp.lines.filter((l) => l.status === status) : imp.lines;
 
   return (
     <div>
-      <PageHeader back={{ href: "/desk/reconcile", label: "Bank matching" }} title={imp.filename} sub={`Uploaded ${formatDateTime(imp.createdAt)} · ${imp.rowCount} rows · ${autoPct}% of credits posted automatically`} />
+      <PageHeader back={{ href: "/desk/reconcile", label: "Bank matching" }} title={imp.filename} sub={`Uploaded ${formatDateTime(imp.createdAt)} · ${imp.rowCount} rows · ${autoPct}% of new credits posted automatically`} />
 
       <div className="mb-4 flex flex-wrap gap-2">
         <Link href={`/desk/reconcile/${imp.id}`} className={cx("rounded-lg border px-3 py-1.5 text-sm", !status ? "border-ink bg-ink text-white" : "border-line bg-surface hover:bg-sunken")}>
