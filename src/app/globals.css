@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@theme {
+  --color-canvas: #f6f5f2;
+  --color-surface: #ffffff;
+  --color-sunken: #efede8;
+  --color-line: #e4e1da;
+  --color-line-strong: #d3cfc6;
+  --color-ink: #1b1d1e;
+  --color-ink-2: #4a4f53;
+  --color-ink-3: #7c8186;
+
+  --color-brand: #1d5c48;
+  --color-brand-hover: #174a3a;
+  --color-brand-soft: #e5efea;
+  --color-brand-ink: #ffffff;
+
+  --color-danger: #b42318;
+  --color-danger-soft: #fbeae8;
+  --color-warn: #965a06;
+  --color-warn-soft: #fbf1df;
+  --color-ok: #1f7a4d;
+  --color-ok-soft: #e6f3ec;
+  --color-info: #2f5d8a;
+  --color-info-soft: #e8eff6;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius-card: 14px;
+  --shadow-card: 0 1px 0 rgb(27 29 30 / 0.03), 0 1px 2px rgb(27 29 30 / 0.04);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-feature-settings: "cv11", "ss01";
+  }
+  ::selection {
+    background: var(--color-brand-soft);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+}
