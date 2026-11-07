@@ -1,0 +1,13 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: township
+      POSTGRES_PASSWORD: township
+      POSTGRES_DB: township
+    ports:
+      - "5433:5432"
+    volumes:
+      - township-db:/var/lib/postgresql/data
+volumes:
+  township-db:

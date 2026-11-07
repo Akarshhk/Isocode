@@ -1,0 +1,311 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+enum Role {
+  RESIDENT
+  STAFF
+  COMMITTEE
+}
+
+enum Relation {
+  OWNER
+  TENANT
+}
+
+enum Team {
+  HELPDESK
+  PLUMBING
+  ELECTRICAL
+  LIFT
+  HOUSEKEEPING
+  SECURITY
+  CIVIL
+}
+
+model Tower {
+  id    String @id @default(cuid())
+  code  String @unique // "T07"
+  flats Flat[]
+}
+
+model Flat {
+  id         String       @id @default(cuid())
+  code       String       @unique // "T07-1203"
+  towerId    String
+  tower      Tower        @relation(fields: [towerId], references: [id])
+  areaSqft   Int
+  members    FlatMember[]
+  upiHandles UpiHandle[]
+  bills      Bill[]
+  payments   Payment[]
+  complaints Complaint[]
+}
+
+model User {
+  id            String       @id @default(cuid())
+  phone         String       @unique // E.164, e.g. +919000000001
+  name          String
+  role          Role
+  team          Team?
+  isDutyManager Boolean      @default(false)
+  active        Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  membership    FlatMember?
+  raised        Complaint[]  @relation("raisedBy")
+  assigned      Complaint[]  @relation("assignee")
+  events        ComplaintEvent[]
+  notifications Notification[]
+}
+
+model FlatMember {
+  id       String   @id @default(cuid())
+  userId   String   @unique
+  user     User     @relation(fields: [userId], references: [id])
+  flatId   String
+  flat     Flat     @relation(fields: [flatId], references: [id])
+  relation Relation
+}
+
+model UpiHandle {
+  id     String @id @default(cuid())
+  vpa    String @unique // lower-case, e.g. neeraj.k@okhdfcbank
+  flatId String
+  flat   Flat   @relation(fields: [flatId], references: [id])
+}
+
+/// Billing rules. The newest row with effectiveFrom <= bill date applies; old bills keep the
+/// rate and interest they were issued with (snapshotted on Bill).
+model BillingConfig {
+  id                 String   @id @default(cuid())
+  ratePaisePerSqft   Int // 650 = Rs 6.50
+  interestBpsPerYear Int // 2100 = 21% simple interest a year on arrears
+  dueDay             Int // day of month the bill falls due
+  effectiveFrom      DateTime @db.Date
+  createdAt          DateTime @default(now())
+}
+
+model Bill {
+  id                 String   @id @default(cuid())
+  flatId             String
+  flat               Flat     @relation(fields: [flatId], references: [id])
+  period             String // "2026-10"
+  amountPaise        Int
+  areaSqft           Int // snapshot
+  ratePaisePerSqft   Int // snapshot
+  interestBpsPerYear Int // snapshot
+  issuedOn           DateTime @db.Date
+  dueOn              DateTime @db.Date
+  createdAt          DateTime @default(now())
+
+  @@unique([flatId, period])
+  @@index([period])
+}
+
+enum PaymentMethod {
+  GATEWAY // test-mode online payment inside the app
+  BANK // bank credit matched from a statement (auto or from the accounts queue)
+}
+
+model Payment {
+  id             Int           @id @default(autoincrement()) // receipt number source
+  flatId         String
+  flat           Flat          @relation(fields: [flatId], references: [id])
+  amountPaise    Int
+  method         PaymentMethod
+  paidOn         DateTime      @db.Date
+  createdAt      DateTime      @default(now())
+  gatewayRef     String?       @unique // pay_TEST_xxx
+  utr            String?       @unique // bank / UPI reference
+  idempotencyKey String?       @unique // stops double-submit of the checkout form
+  bankLineId     String?       @unique
+  bankLine       BankLine?     @relation(fields: [bankLineId], references: [id])
+  postedById     String? // staff user for queue resolutions
+  note           String?
+
+  @@index([flatId, paidOn])
+}
+
+model BankImport {
+  id           String     @id @default(cuid())
+  filename     String
+  uploadedById String
+  createdAt    DateTime   @default(now())
+  rowCount     Int
+  lines        BankLine[]
+}
+
+enum LineStatus {
+  AUTO_POSTED
+  ALREADY_POSTED
+  QUEUED
+  RESOLVED
+  IGNORED
+  DUPLICATE
+}
+
+model BankLine {
+  id           String     @id @default(cuid())
+  importId     String
+  import       BankImport @relation(fields: [importId], references: [id])
+  rowNumber    Int
+  txnDate      DateTime   @db.Date
+  narration    String
+  reference    String?
+  amountPaise  Int // credits positive, debits negative
+  fingerprint  String?    @unique // null for in-file/previously-seen duplicates
+  status       LineStatus
+  flatId       String? // flat it was posted to (auto or resolved)
+  reasons      Json // string[] explaining the decision
+  candidates   Json // [{flatCode, why}] suggestions for the accounts queue
+  resolvedById String?
+  resolvedAt   DateTime?
+  payment      Payment?
+
+  @@index([status])
+}
+
+enum Category {
+  PLUMBING
+  ELECTRICAL
+  LIFT
+  SECURITY
+  HOUSEKEEPING
+  CIVIL
+  PEST_CONTROL
+  PARKING
+  OTHER
+}
+
+enum Urgency {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum ComplaintStatus {
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum ClassifiedBy {
+  AI
+  FALLBACK
+}
+
+enum Scope {
+  FLAT
+  COMMON
+}
+
+model Complaint {
+  id              String           @id @default(cuid())
+  number          Int              @unique @default(autoincrement())
+  flatId          String
+  flat            Flat             @relation(fields: [flatId], references: [id])
+  towerId         String
+  raisedById      String
+  raisedBy        User             @relation("raisedBy", fields: [raisedById], references: [id])
+  description     String
+  category        Category
+  urgency         Urgency
+  scope           Scope
+  aiCategory      Category?
+  aiUrgency       Urgency?
+  aiConfidence    Float?
+  aiReason        String?
+  classifiedBy    ClassifiedBy
+  needsReview     Boolean          @default(false)
+  safetyKeyword   String? // set when the safety rule fired
+  status          ComplaintStatus  @default(ASSIGNED)
+  assigneeId      String?
+  assignee        User?            @relation("assignee", fields: [assigneeId], references: [id])
+  duplicateOfId   String?
+  duplicateOf     Complaint?       @relation("dupes", fields: [duplicateOfId], references: [id])
+  duplicates      Complaint[]      @relation("dupes")
+  responseDueAt   DateTime
+  firstResponseAt DateTime?
+  resolvedAt      DateTime?
+  closedAt        DateTime?
+  rating          Int?
+  reopenCount     Int              @default(0)
+  createdAt       DateTime         @default(now())
+  photo           ComplaintPhoto?
+  events          ComplaintEvent[]
+
+  @@index([status])
+  @@index([towerId, category, createdAt])
+}
+
+model ComplaintPhoto {
+  id          String    @id @default(cuid())
+  complaintId String    @unique
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  mime        String
+  data        Bytes
+}
+
+enum EventType {
+  CREATED
+  CLASSIFIED
+  SAFETY_ESCALATED
+  ASSIGNED
+  RECATEGORISED
+  URGENCY_CHANGED
+  LINKED
+  UNLINKED
+  STATUS_CHANGED
+  COMMENT
+  REOPENED
+  RATED
+}
+
+model ComplaintEvent {
+  id          String    @id @default(cuid())
+  complaintId String
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  actorId     String?
+  actor       User?     @relation(fields: [actorId], references: [id])
+  type        EventType
+  message     String
+  data        Json?
+  at          DateTime  @default(now())
+
+  @@index([complaintId, at])
+}
+
+model OtpChallenge {
+  id         String    @id @default(cuid())
+  phone      String
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone, createdAt])
+}
+
+enum Channel {
+  SMS
+  WHATSAPP
+}
+
+/// Mock outbox: nothing is really sent; messages are stored and shown in the UI.
+model Notification {
+  id      String   @id @default(cuid())
+  userId  String?
+  user    User?    @relation(fields: [userId], references: [id])
+  channel Channel
+  body    String
+  at      DateTime @default(now())
+}
