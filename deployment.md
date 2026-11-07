@@ -1,7 +1,7 @@
 # Deployment
 
 **Repository:** https://github.com/Akarshhk/Isocode
-**Live app:** _added after the first Vercel deploy (see below)_
+**Live app:** https://township-app.vercel.app (Vercel project `township-app`, Neon database `township-db`)
 
 The app is a single Next.js 15 project (UI and server in one), backed by PostgreSQL through Prisma.
 The test payment gateway, OTP SMS and WhatsApp/SMS notifications are mocked inside the app.
@@ -63,7 +63,7 @@ To reset the demo data, run `npm run db:seed` locally with `DATABASE_URL` pointe
 ### Steps to deploy a fresh copy
 
 1. Vercel → **Add New → Project** → import the GitHub repo. Framework preset: Next.js (detected). Leave build settings as they are: `vercel-build` is picked up from `package.json`.
-2. **Storage → Create Database → Neon** (free plan) and connect it to the project. This adds `DATABASE_URL` and `DATABASE_URL_UNPOOLED`.
+2. **Storage → Create Database → Neon** (free plan) and connect it to the project with the environment variable prefix `DATABASE`. This adds `DATABASE_URL` and `DATABASE_URL_UNPOOLED` (plus some `DATABASE_PG*` extras the app ignores).
 3. **Settings → Environment Variables:** add `SESSION_SECRET`, `DEMO_MODE` = `true`, and optionally `ANTHROPIC_API_KEY`.
 4. **Deployments → Redeploy.**
 

@@ -78,6 +78,7 @@ Notification(user?, channel SMS|WHATSAPP, body, at)     -- mock outbox, visible 
 - Monthly bill = area × ₹6.50, rounded to the rupee. All three sample rows match exactly: 1150 → ₹7,475, 980 → ₹6,370, 1640 → ₹10,660.
 - Interest on arrears: **21% a year, simple**, on overdue principal from the day after the due date. It's configurable. *Assumption: we take 21% as the cap in the Maharashtra model bye-laws; the committee should confirm.*
   - Swati: ₹6,370 × 21% × 47/365 = **₹172**
+    - *Corrected during the build:* 47 days overdue on a monthly cycle means two bills are unpaid, so the ledger gives ₹275 interest and ₹13,015 due. See TDD assumption A5.
   - Aamir: ₹5,660 × 21% × 18/365 = **₹59**
 - Payments are applied to interest first, then to the oldest bill (FIFO). *Assumption.*
 - Staff can run "Generate bills for month": idempotent, because a flat can have only one bill per period.
@@ -155,7 +156,7 @@ Each credit row in the CSV goes through a **decision table**, not a magic score,
 
 ## 7. Tests (Vitest)
 - Billing: area × rate, rounding, idempotent bill run
-- Interest: Swati's ₹172 and Aamir's ₹59, zero before the due date
+- Interest: Swati's ₹172 (₹275 across her two unpaid bills, as built) and Aamir's ₹59, zero before the due date
 - Payment allocation: interest first, then FIFO
 - Reference parser: all formats, plus invalid codes rejected
 - Matcher: one test per row of the decision table, including a gateway payment that reappears in the CSV and the same file uploaded twice

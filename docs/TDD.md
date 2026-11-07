@@ -1,7 +1,7 @@
 # Technical Design Document: Township resident app
 
 **GitHub:** https://github.com/Akarshhk/Isocode
-**Live app:** LIVE_URL_PLACEHOLDER (demo logins in deployment.md; no SMS is sent, the code is shown on screen)
+**Live app:** https://township-app.vercel.app (demo logins in deployment.md; no SMS is sent, the code is shown on screen)
 **Brief:** 1. Gated township resident app (Company A, Pune). Software Engineering core build.
 **Author:** Akarsh, November 2026. Built with AI assistance (Claude Code) for drafting and code. The decisions, numbers and trade-offs below are mine, and I can defend them in the interview.
 
