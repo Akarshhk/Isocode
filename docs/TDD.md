@@ -44,7 +44,7 @@ Extras beyond the core: monthly billing run, flat ledger lookup for staff, insta
                                    └───────────────┬──────────────────────────┘            └──────────────┘
                                                    │ complaint text only
                                                    ▼
-                                    Anthropic API (Claude Haiku), JSON schema output
+                           Gemini API (Gemini Flash) or Anthropic API (Claude Haiku), JSON schema output
        Mocked inside the app: OTP SMS, payment gateway (test mode), WhatsApp/SMS notifications (stored in an outbox table)
 ```
 
@@ -165,11 +165,14 @@ Credits waiting in the accounts queue are not counted as collected. The committe
 
 **The AI is used for one job only: complaint category, urgency and scope.** Payment matching uses no AI at all, on purpose: money must be deterministic and explainable.
 
-- **The call.** Claude Haiku (`claude-haiku-5-5`), with a system prompt that defines each category and urgency level.
-  - The output is constrained by a JSON schema (structured outputs) and validated again with zod: category, urgency, scope, confidence 0–1, and a one-line reason.
-  - Settings: effort `low`, 8-second timeout, one retry.
-- **Only the complaint text is sent.** No name, phone number or flat code. The commercial API does not train on inputs. This is data minimisation under the DPDP Act.
-- **Cost.** About 1,800 complaints a month is roughly 1.5 M tokens, under US$1 a month at Haiku prices.
+- **The call.** One system prompt defines each category and urgency level. Two providers are supported behind one interface (`src/lib/complaints/provider.ts`), chosen by which key is set:
+  - **Gemini** (`gemini-3.8-flash`, via `GEMINI_API_KEY`): the live deployment uses this. Thinking level low, 8-second timeout per attempt, one retry, 15-second hard cap.
+  - **Claude Haiku** (`claude-haiku-5-5`, via `ANTHROPIC_API_KEY`): effort low, 8-second timeout, one retry.
+  - If both keys are set, `AI_PROVIDER` picks; otherwise Gemini.
+  - Either way the output is constrained by a JSON schema at the provider and validated again with zod: category, urgency, scope, confidence 0–1, and a one-line reason. Everything after that (safety rule, fallback, review flags) is the same for both.
+- **Why two providers.** The prompt and the checks are the valuable part, not the vendor. Keeping the provider swappable means a price change, an outage or a data-protection requirement can be met with a key change, not a rewrite.
+- **Only the complaint text is sent.** No name, phone number or flat code. This is data minimisation under the DPDP Act. See A17 on which API tier may use inputs for training.
+- **Cost.** About 1,800 complaints a month is roughly 1.5 M tokens: under US$1 a month on Claude Haiku 5.5 ($0.10 / $0.50 per million tokens). Gemini Flash's current price list should be checked before go-live.
 
 | When the AI is wrong or unsure | What happens |
 |---|---|
@@ -180,7 +183,7 @@ Credits waiting in the accounts queue are not counted as collected. The committe
 | Duplicates | Linked, never closed. Staff can unlink a report that was linked wrongly |
 | Measuring it | The committee sees the **AI override rate**. Rising overrides are the signal to change the prompt or model |
 
-**Honest note:** no API key was available while building, so the live Claude call has not been exercised end to end yet. Unit tests cover its contract with mocked responses: success, low confidence, timeout and invalid output. The keyword fallback path has been run for real. Adding `ANTHROPIC_API_KEY` in Vercel turns the AI on with no code change.
+**Honest note:** no AI key was available while building, so neither live call was exercised end to end during the build. Unit tests cover both contracts with mocked responses: success, low confidence, blocked or cut-off replies, timeouts, rate limits, rejected keys and off-schema output. The keyword fallback path has been run for real. `/api/health` shows which provider is active, and each fallback ticket shows the help desk why the AI was skipped (for example "AI rate-limited"), so a misconfigured key is visible straight away.
 
 ## 7. UI and design decisions
 
@@ -238,7 +241,7 @@ The brief asks for minimal design: white space, a restrained palette, clear type
 
 ## 9. Testing
 
-**76 unit tests (Vitest)** cover the logic that matters most:
+**93 unit tests (Vitest)** cover the logic that matters most:
 
 - **Billing.** The sample bills, rounding, interest worked examples, interest-first FIFO allocation, advance credit, not-yet-due bills, and the running balance.
 - **Matching.**
@@ -250,6 +253,7 @@ The brief asks for minimal design: white space, a restrained palette, clear type
   - Fallback, low confidence and the lift scope.
   - Duplicate linking: tower, window, never in-flat.
   - Least-loaded assignment.
+- **AI providers.** Which provider is chosen from the keys set; Gemini replies that are blocked, cut off, empty, not JSON or off-schema; the reason shown to the help desk for each kind of failure; and the fallback when Gemini is rate-limited.
 - **Security.** Flat access by role, route-to-role mapping, phone normalisation, and OTP hash matching.
 
 **Manual end-to-end checks on the running app:**
@@ -286,6 +290,7 @@ The brief is the only source. Everything else below is an assumption, labelled s
   - Fictional names; phone numbers in an unused range.
 - **A15.** GST on maintenance is not modelled; the brief is silent on it. Flag for the committee: maintenance above ₹7,500 a month per member can attract GST for larger housing societies. Aamir's ₹10,660 bill would be affected, so a CA should confirm before go-live.
 - **A16.** English interface only for this phase.
+- **A17.** The demo classifies complaints with a Gemini API key. Under Google's terms, inputs on the Gemini API's unpaid tier may be used to improve Google's products; the paid tier, like the Anthropic API, does not train on inputs. That is acceptable here because every resident is fictional, but production must use a paid tier (or Claude), and the committee should record that choice under the DPDP Act.
 
 ## 11. What I cut, and what I would do next
 
@@ -312,7 +317,7 @@ The brief is the only source. Everything else below is an assumption, labelled s
 
 ## 12. Known limits
 
-- **The live AI call** hasn't been run against the API yet (section 6).
+- **The live AI call** wasn't run against either API during the build (section 6).
 - **Past months aren't frozen.** The ledger is recomputed from bills and payments, so there is no monthly close; correcting a past payment changes past statements. Production needs period close and adjustment entries.
 - **Report queries.** The committee report and matcher load every flat's bills and payments into memory. That is fine for 2,400 flats, about 30,000 bills a year. Beyond that, move the aggregates into SQL.
 - **Photos are stored in Postgres,** which is acceptable for a demo; production should use object storage with a lifecycle policy.

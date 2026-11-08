@@ -33,13 +33,13 @@ Other commands:
 
 | Command | What it does |
 |---|---|
-| `npm test` | Unit tests (Vitest): billing and interest, bank matching, safety rule and AI fallback, access control |
+| `npm test` | Unit tests (Vitest): billing and interest, bank matching, safety rule, AI providers and fallback, access control |
 | `npm run typecheck` | TypeScript check |
 | `npm run build` | Production build |
 | `npx tsx scripts/check-samples.ts` | Prints the three sample flats from the brief, as computed by the ledger |
 | `npx tsx --conditions=react-server scripts/try-complaint.ts T12-0304 "Lift stuck, people inside"` | Runs one complaint through classification, safety rule, linking and assignment |
 
-Without `ANTHROPIC_API_KEY` the app still works: complaints are classified by the keyword fallback and flagged for the help desk to check.
+Without an AI key (`GEMINI_API_KEY` or `ANTHROPIC_API_KEY`) the app still works: complaints are classified by the keyword fallback and flagged for the help desk to check.
 
 ---
 
@@ -49,7 +49,7 @@ Without `ANTHROPIC_API_KEY` the app still works: complaints are classified by th
 |---|---|
 | Web app and API (Next.js server actions and route handlers) | **Vercel**, from the `main` branch of the GitHub repo |
 | Database | **Neon** serverless Postgres, connected through Vercel's Storage (Marketplace) integration |
-| AI | Anthropic API, Claude Haiku (`claude-haiku-5-5`), called from the server only |
+| AI | Gemini API (`gemini-3.8-flash`) on the live deployment; Anthropic API (Claude Haiku, `claude-haiku-5-5`) also supported. Called from the server only |
 
 On every deploy Vercel runs the `vercel-build` script:
 
@@ -64,8 +64,9 @@ To reset the demo data, run `npm run db:seed` locally with `DATABASE_URL` pointe
 
 1. Vercel → **Add New → Project** → import the GitHub repo. Framework preset: Next.js (detected). Leave build settings as they are: `vercel-build` is picked up from `package.json`.
 2. **Storage → Create Database → Neon** (free plan) and connect it to the project with the environment variable prefix `DATABASE`. This adds `DATABASE_URL` and `DATABASE_URL_UNPOOLED` (plus some `DATABASE_PG*` extras the app ignores).
-3. **Settings → Environment Variables:** add `SESSION_SECRET`, `DEMO_MODE` = `true`, and optionally `ANTHROPIC_API_KEY`.
+3. **Settings → Environment Variables:** add `SESSION_SECRET`, `DEMO_MODE` = `true`, and optionally `GEMINI_API_KEY` (or `ANTHROPIC_API_KEY`).
 4. **Deployments → Redeploy.**
+5. Open `/api/health` on the deployed site. It reports whether the database is reachable, whether `SESSION_SECRET` is set and long enough, and whether demo mode and the AI are on, without showing any value. Anything other than `"ok": true` means a setting needs fixing (it returns HTTP 503).
 
 ### Environment variables (names only)
 
@@ -75,8 +76,11 @@ To reset the demo data, run `npm run db:seed` locally with `DATABASE_URL` pointe
 | `DATABASE_URL_UNPOOLED` | yes | Direct connection used by `prisma migrate deploy` (set by the Neon integration) |
 | `SESSION_SECRET` | yes | At least 32 random characters. Signs session cookies and hashes one-time codes |
 | `DEMO_MODE` | yes, for review | `true` shows the one-time code on the sign-in screen instead of sending an SMS |
-| `ANTHROPIC_API_KEY` | optional | Enables AI complaint classification. Without it the keyword fallback is used |
+| `GEMINI_API_KEY` | optional | Enables AI complaint classification with Gemini (Google AI Studio key). Without an AI key the keyword fallback is used |
+| `GEMINI_MODEL` | optional | Defaults to `gemini-3.8-flash` |
+| `ANTHROPIC_API_KEY` | optional | Enables AI complaint classification with Claude instead |
 | `ANTHROPIC_MODEL` | optional | Defaults to `claude-haiku-5-5` |
+| `AI_PROVIDER` | optional | `gemini` or `claude`; only needed when both keys are set (default `gemini`) |
 
 No secrets are committed: `.env` is git-ignored and `.env.example` holds names and local defaults only.
 

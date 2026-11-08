@@ -14,4 +14,4 @@ npm run dev
 npm test
 ```
 
-Stack: Next.js 15 (App Router, server actions) · TypeScript · PostgreSQL + Prisma · Tailwind CSS · Anthropic API (Claude Haiku) · Vitest · Vercel + Neon.
+Stack: Next.js 15 (App Router, server actions) · TypeScript · PostgreSQL + Prisma · Tailwind CSS · Gemini API or Anthropic API (either one classifies complaints) · Vitest · Vercel + Neon.

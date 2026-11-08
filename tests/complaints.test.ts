@@ -3,7 +3,7 @@ import { classifyComplaint } from "@/lib/complaints/classify";
 import { classifyByKeywords } from "@/lib/complaints/keywords";
 import { findDuplicateRoot, pickAssignee, type OpenComplaint } from "@/lib/complaints/linking";
 import { allowedUrgency, detectSafety } from "@/lib/complaints/rules";
-import type { AiResult } from "@/lib/complaints/ai";
+import type { AiResult } from "@/lib/complaints/ai-prompt";
 
 const aiSays = (r: Partial<AiResult>) => async (): Promise<AiResult> => ({
   category: "OTHER",

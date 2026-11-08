@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { aiConfigured } from "@/lib/complaints/ai";
+import { aiStatus } from "@/lib/complaints/provider";
 import { demoMode } from "@/lib/auth/otp";
 
 // Public status check for uptime monitors and for diagnosing a deploy.
@@ -26,7 +26,7 @@ export async function GET() {
         database,
         sessionSecret,
         demoMode: demoMode(),
-        ai: aiConfigured() ? "configured" : "not configured (keyword fallback in use)",
+        ai: aiStatus(),
       },
     },
     { status: ok ? 200 : 503, headers: { "Cache-Control": "no-store" } },

@@ -2,7 +2,7 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { classifyComplaint } from "./classify";
-import { classifyWithClaude, describeAiError } from "./ai";
+import { classifyWithAi, describeAiError } from "./provider";
 import { findDuplicateRoot, pickAssignee, DUPLICATE_WINDOW_HOURS } from "./linking";
 import { CATEGORY_LABEL, RESPONSE_MINUTES, TEAM_FOR_CATEGORY, URGENCY_LABEL, type TeamT } from "./rules";
 
@@ -16,7 +16,7 @@ export type NewComplaintInput = {
 /** Raises a complaint: classify, apply the safety rule, link duplicates, assign, notify. */
 export async function raiseComplaint(input: NewComplaintInput) {
   const flat = await prisma.flat.findUniqueOrThrow({ where: { id: input.flatId }, include: { tower: true } });
-  const cls = await classifyComplaint(input.description, classifyWithClaude, describeAiError);
+  const cls = await classifyComplaint(input.description, classifyWithAi, describeAiError);
   const now = new Date();
 
   const recent = await prisma.complaint.findMany({

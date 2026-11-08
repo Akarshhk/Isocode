@@ -1,4 +1,4 @@
-import type { AiResult } from "./ai";
+import type { AiResult } from "./ai-prompt";
 import { classifyByKeywords } from "./keywords";
 import { allowedUrgency, detectSafety, type CategoryT, type ScopeT, type UrgencyT } from "./rules";
 
