@@ -241,7 +241,7 @@ The brief asks for minimal design: white space, a restrained palette, clear type
 
 ## 9. Testing
 
-**93 unit tests (Vitest)** cover the logic that matters most:
+**94 unit tests (Vitest)** cover the logic that matters most:
 
 - **Billing.** The sample bills, rounding, interest worked examples, interest-first FIFO allocation, advance credit, not-yet-due bills, and the running balance.
 - **Matching.**

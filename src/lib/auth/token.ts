@@ -8,12 +8,19 @@ export const SESSION_DAYS = 7;
 export type Role = "RESIDENT" | "STAFF" | "COMMITTEE";
 export type SessionClaims = { sub: string; role: Role; name: string; flatId: string | null };
 
-export function sessionSecret(): Uint8Array {
+/** null when SESSION_SECRET is usable, otherwise what is wrong with it. */
+export function sessionSecretProblem(): "missing" | "too short (needs 32+ characters)" | null {
   const s = process.env.SESSION_SECRET;
-  if (!s || s.length < 32) {
+  if (!s) return "missing";
+  if (s.length < 32) return "too short (needs 32+ characters)";
+  return null;
+}
+
+export function sessionSecret(): Uint8Array {
+  if (sessionSecretProblem()) {
     throw new Error("SESSION_SECRET must be set to at least 32 characters (see .env.example).");
   }
-  return new TextEncoder().encode(s);
+  return new TextEncoder().encode(process.env.SESSION_SECRET);
 }
 
 export async function signSession(claims: SessionClaims): Promise<string> {

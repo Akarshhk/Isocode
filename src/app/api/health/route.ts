@@ -2,14 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { aiStatus } from "@/lib/complaints/provider";
 import { demoMode } from "@/lib/auth/otp";
+import { sessionSecretProblem } from "@/lib/auth/token";
 
 // Public status check for uptime monitors and for diagnosing a deploy.
 // Reports whether each setting is present, never its value.
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const secret = process.env.SESSION_SECRET;
-  const sessionSecret = !secret ? "missing" : secret.length < 32 ? "too short (needs 32+ characters)" : "ok";
+  const sessionSecret = sessionSecretProblem() ?? "ok";
 
   let database = "ok";
   try {

@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { normalisePhone, formatPhone } from "@/lib/auth/phone";
 import { OTP_MAX_ATTEMPTS, OTP_MAX_PER_10_MIN, OTP_TTL_MINUTES, demoMode, generateOtp, hashOtp, otpMatches } from "@/lib/auth/otp";
 import { startSession, endSession } from "@/lib/auth/session";
-import { HOME_FOR_ROLE } from "@/lib/auth/token";
+import { HOME_FOR_ROLE, sessionSecretProblem } from "@/lib/auth/token";
 
 export type LoginState =
   | { step: "phone"; error?: string; phone?: string }
@@ -74,6 +74,10 @@ async function verifyCode(prev: LoginState, formData: FormData): Promise<LoginSt
 export async function loginAction(prev: LoginState, formData: FormData): Promise<LoginState> {
   const intent = formData.get("intent");
   if (intent === "reset") return { step: "phone" };
+  // Without a valid secret no session can be signed: say so instead of failing after the code is entered.
+  if (sessionSecretProblem()) {
+    return { step: "phone", error: "Sign-in isn't set up on this server yet (SESSION_SECRET). An administrator can check /api/health." };
+  }
   if (intent === "verify") return verifyCode(prev, formData);
   return requestCode(prev, formData);
 }

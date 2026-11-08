@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { canViewFlat } from "@/lib/auth/access";
 import { normalisePhone } from "@/lib/auth/phone";
-import { rolesForPath } from "@/lib/auth/token";
+import { rolesForPath, sessionSecretProblem } from "@/lib/auth/token";
 import { hashOtp, otpMatches } from "@/lib/auth/otp";
 
 const resident = { sub: "u1", role: "RESIDENT" as const, name: "Swati", flatId: "flatA" };
@@ -53,5 +53,18 @@ describe("OTP hashing", () => {
     expect(otpMatches("+919000000001", "123456", h)).toBe(true);
     expect(otpMatches("+919000000001", "123457", h)).toBe(false);
     expect(otpMatches("+919000000002", "123456", h)).toBe(false);
+  });
+});
+
+describe("session secret check", () => {
+  it("reports a missing or short secret before any sign-in is attempted", () => {
+    const saved = process.env.SESSION_SECRET;
+    delete process.env.SESSION_SECRET;
+    expect(sessionSecretProblem()).toBe("missing");
+    process.env.SESSION_SECRET = "short-secret";
+    expect(sessionSecretProblem()).toMatch(/too short/);
+    process.env.SESSION_SECRET = "x".repeat(64);
+    expect(sessionSecretProblem()).toBeNull();
+    process.env.SESSION_SECRET = saved;
   });
 });
